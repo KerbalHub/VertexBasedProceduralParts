@@ -7,6 +7,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.SocialPlatforms;
 using static System.Collections.Specialized.BitVector32;
+using static Targeting;
 
 namespace VertexBasedProceduralParts
 {
@@ -41,15 +42,15 @@ namespace VertexBasedProceduralParts
         public float selectedVertex;
 
         [KSPField(guiActiveEditor = true, guiName = "Vertex X")]
-        [UI_FloatRange(minValue = -2f, maxValue = 5f, stepIncrement = 0.01f)]
+        [UI_FloatRange(minValue = -2f, maxValue = 5f, stepIncrement = 0.001f)]
         public float vertexX;
 
         [KSPField(guiActiveEditor = true, guiName = "Vertex Y")]
-        [UI_FloatRange(minValue = -2f, maxValue = 5f, stepIncrement = 0.01f)]
+        [UI_FloatRange(minValue = -2f, maxValue = 5f, stepIncrement = 0.001f)]
         public float vertexY;
 
         [KSPField(guiActiveEditor = true, guiName = "Vertex Z")]
-        [UI_FloatRange(minValue = -2f, maxValue = 5f, stepIncrement = 0.01f)]
+        [UI_FloatRange(minValue = -2f, maxValue = 5f, stepIncrement = 0.001f)]
         public float vertexZ;
 
         [KSPField(guiActiveEditor = true, guiName = "Mirror Symmetry")]
@@ -78,6 +79,17 @@ namespace VertexBasedProceduralParts
         public void ResetTopToCylinder()
         {
             ResetToCylinder(topSection, 1.25f);
+        }
+        [KSPEvent(guiActiveEditor = true, guiName = "Cap Bottom")]
+        public void CapBottom()
+        {
+            MakeCap(bottomSection);
+        }
+
+        [KSPEvent(guiActiveEditor = true, guiName = "Cap Top")]
+        public void CapTop()
+        {
+            MakeCap(topSection);
         }
 
         [KSPEvent(guiActiveEditor = true, guiName = "Copy Cross-Section to Clipboard")]
@@ -202,6 +214,17 @@ namespace VertexBasedProceduralParts
 
             GenerateMesh();
         }
+        void MakeCap(CrossSection section)
+        {
+            int n = section.vertices.Count;
+
+            for (int i = 0; i < n; i++)
+            {
+                section.vertices[i] = new Vector2(0, 0);
+            }
+
+            GenerateMesh();
+        }
         void AttachSlider(string fieldName)
         {
             var slider = Fields[fieldName].uiControlEditor as UI_FloatRange;
@@ -240,6 +263,15 @@ namespace VertexBasedProceduralParts
             if (!HighLogic.LoadedSceneIsEditor) return;
 
             if (isDragging) return;
+
+            if (Input.GetKeyDown(KeyCode.LeftShift))
+            {
+                isShiftDown = true;
+            }
+            if (Input.GetKeyUp(KeyCode.LeftShift))
+            {
+                isShiftDown = false;
+            }
 
             CrossSection section = GetActiveSection();
 
@@ -407,10 +439,10 @@ namespace VertexBasedProceduralParts
                 collider = meshObject.AddComponent<MeshCollider>();
             }
 
-            if (isFlipppedNormals)
-            {
-                Flip(meshFilter.sharedMesh);
-            }
+            //if (isFlipppedNormals)
+            //{
+            //    Flip(meshFilter.sharedMesh);
+            //}
 
             if (isFlatShading)
             {
@@ -520,12 +552,14 @@ namespace VertexBasedProceduralParts
 
         // Draw Window
 
-        private Rect windowEditor = new Rect(200, 200, 500, 500);
+        private Rect windowEditor = new Rect(200, 200, 800, 800);
         private bool isWindowOpen = false;
         private bool isDragging = false;
         private Vector2 boxSize = new Vector2(16, 16);
         private Vector2 offset;
         private int draggedVertex = -1;
+        private float interval = 0.001f;
+        public bool isShiftDown = true;
         void OnGUI()
         {
             if (isWindowOpen)
@@ -537,7 +571,7 @@ namespace VertexBasedProceduralParts
         void DrawWindowContent(int windowID)
         {
             CrossSection section = GetActiveSection();
-            Vector2 center = new Vector2(250, 200);
+            Vector2 center = new Vector2(400, 400);
             List<Vector3> vertices = new List<Vector3>();
             List<Vector2> flatVertices;
             Vector2 newVertexPosition;
@@ -545,7 +579,7 @@ namespace VertexBasedProceduralParts
             Event e = Event.current;
 
 
-            Rect vertexRect = new Rect (150 + center.x, 150 + center.y, boxSize.x, boxSize.y);
+            Rect vertexRect = new Rect (350 + center.x, 350 + center.y, boxSize.x, boxSize.y);
 
             vertices = section.vertices;
 
@@ -553,10 +587,19 @@ namespace VertexBasedProceduralParts
 
             flatVertices = vertices.Select(v3 => (Vector2)v3).ToList();
 
+            if (isShiftDown)
+            {
+                interval = 0.05f;
+            }
+            else
+            {
+                interval = 0.001f;
+            }
+
             for (int i = 0; i < flatVertices.Count; i++)
             {
                 Vector2 pos = flatVertices[i];
-                vertexRect = new Rect(pos.x * 150 + center.x, pos.y * 150 + center.y, boxSize.x, boxSize.y);;
+                vertexRect = new Rect(pos.x * 350 + center.x, pos.y * 350 + center.y, boxSize.x, boxSize.y);;
                 if (i == (int)selectedVertex)
                 {
                     GUI.Box(vertexRect, "o");
@@ -582,8 +625,8 @@ namespace VertexBasedProceduralParts
             }
             if (isDragging && draggedVertex != -1 && e.type == EventType.MouseDrag)
             {
-                vertexX = (e.mousePosition.x - center.x - offset.x) / 150;
-                vertexY = (e.mousePosition.y - center.y - offset.y) / 150;
+                vertexX = (float)Math.Round(((e.mousePosition.x - center.x - offset.x) / 350) / interval) * interval;
+                vertexY = (float)Math.Round(((e.mousePosition.y - center.y - offset.y) / 350) / interval) * interval;
                 newSlider = new Vector3(vertexX, vertexY, 0);
                 section.vertices[(int)selectedVertex] = new Vector3(vertexX, vertexY, 0);
 
@@ -611,7 +654,7 @@ namespace VertexBasedProceduralParts
                 draggedVertex = -1;
                 e.Use();
             }
-            if (GUI.Button(new Rect(10, 400, 480, 95), "Close Window"))
+            if (GUI.Button(new Rect(10, 780, 490, 15), "Close Window"))
             {
                 isWindowOpen = !isWindowOpen;
             }

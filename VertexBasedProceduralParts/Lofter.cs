@@ -20,6 +20,9 @@ namespace VertexBasedProceduralParts
             vertices.AddRange(bottomRing);
             vertices.AddRange(topRing);
 
+            vertices.AddRange(bottomRing);
+            vertices.AddRange(topRing);
+
             // create tris
             int n = bottomRing.Count;
             List<int> tris = new List<int>();
@@ -54,6 +57,38 @@ namespace VertexBasedProceduralParts
                     tris.Add(bl);
                     tris.Add(tr);
                     tris.Add(tl);
+                }
+            }
+            int offset = n * 2;
+            for (int i = 0; i < n; i++)
+            {
+                // bottom ring indices
+                int bl = i + offset;
+                int br = (i + 1) % n + offset;
+
+                // top ring indices
+                int tl = i + n + offset;
+                int tr = (i + 1) % n + n + offset;
+
+                if (i % 2 == 0)
+                {
+                    tris.Add(bl);
+                    tris.Add(tl);
+                    tris.Add(br);
+
+                    tris.Add(br);
+                    tris.Add(tl);
+                    tris.Add(tr);
+                }
+                else
+                {
+                    tris.Add(bl);
+                    tris.Add(tr);
+                    tris.Add(br);
+
+                    tris.Add(bl);
+                    tris.Add(tl);
+                    tris.Add(tr);
                 }
             }
 
